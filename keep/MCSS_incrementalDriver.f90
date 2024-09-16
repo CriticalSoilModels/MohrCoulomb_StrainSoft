@@ -38,10 +38,11 @@
 !  Main program that\_calls\_umat ( performs calculation writing  to output.txt).
 PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
    use incrementalDriver_funcs, only: splitaLine, ReadStepCommons, PARSER, get_increment,&
-                                      USOLVER, EXITNOW
-   use MOD_MCSS_ESM             , only: UMAT => UMAT_MohrCoulombStrainSoftening
+      USOLVER, EXITNOW
+   use MOD_MCSS_ESM           , only: UMAT_MohrCoulombStrainSoftening
+
    implicit none
-   
+
    character*80  cmname,rebarn
    integer ndi,nshr,ntens,nstatv,nprops,ncrds
    integer noel,npt,layer,kspt,lrebar,kinc,i
@@ -283,7 +284,7 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
       write(stressHead(i), '(a,i1,a)' )  'stress(',i, ')'
    enddo
    do i=1,nstatv
-      write(statevHead(i), '(a,i3,a)' )  '  statev(',i, ')'
+      write(statevHead(i), '(a,i0,a)' )  '  statev(',i, ')'
    enddo
    write(2,'(a14,500a20)') timeHead,stranHead,stressHead,statevHead
 
@@ -313,12 +314,12 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
             ! write to the screen before the first increment
             ! WaveHello: Replacing this format
             write(*,'(A,I3,A,I3,A,I5,A,I2,A,F9.4,A,F9.4)') &
-            ' ikeyword = ', ikeyword, &
-            ' kstep = ', kstep, &
-            ' kinc = ', kinc, &
-            ' kiter = ', kiter, &
-            ' TEMP = ', TEMP, &
-            ' TIME = ', TIME(1)
+               ' ikeyword = ', ikeyword, &
+               ' kstep = ', kstep, &
+               ' kinc = ', kinc, &
+               ' kiter = ', kiter, &
+               ' TEMP = ', TEMP, &
+               ' TIME = ', TIME(1)
             if(iRepetition > 1) then  ! while repeating  recall the loading parameters of the repeated step read in during the first iRepetition
                ninc             = ofStep(istep)%ninc
                maxiter          = ofStep(istep)%maxiter
@@ -394,7 +395,9 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
                read(mString,*) mImport
                call ReadStepCommons(1,ninc,maxiter,deltaTime,deltaTemp,every)    ! AN 2016  read(1,*) ninc, maxiter, deltaTime ! AN 2023 temperat
                read(1,'(a)') keywords(3)
+
                columnsInFile(:) = 0; importFactor(:) = 1
+
                do i=1,6
                   read(1,'(a)') aShortLine
                   call splitaLine(aShortLine,'*',leftLine,rightLine,okSplit )
@@ -571,7 +574,7 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
             kinc=0
             r_statev(:)=statev(:);  r_stress(:)=stress(:)     ! AN 21.06.2017 remember the initial state and stress
             !=== first call umat with dstrain=0 dtime=0 just for stiffness (=jacobian ddsdde)
-            call  UMAT(stress,statev,ddsdde,sse,spd,scd,                       &
+            call  UMAT_MohrCoulombStrainSoftening(stress,statev,ddsdde,sse,spd,scd,                       &
                rpl,ddsddt,drplde,drpldt,                               &
                stran,dstran,time,dtime,temp,dtemp,predef,dpred,cmname, &
                ndi,nshr,ntens,nstatv,props,nprops,coords,drot,pnewdt,  &
@@ -646,8 +649,8 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
                      u_dstress = - matmul(cMt,a_dstress)-matmul(cMe,dstran)+ mbinc
                      call  USOLVER(ddsdde_bar,c_dstran,u_dstress,ifstress,ntens)
                      dstran = dstran + c_dstran
-
-                     call  UMAT(stress,statev,ddsdde,sse,spd,scd,                       &
+                     print *, "Inc driver dstran", dstran
+                     call  UMAT_MohrCoulombStrainSoftening(stress,statev,ddsdde,sse,spd,scd,                       &
                         rpl,ddsddt,drplde,drpldt,                               &
                         stran,dstran,time,dtime,temp,dtemp,predef,dpred,cmname, &
                         ndi,nshr,ntens,nstatv,props,nprops,coords,drot,pnewdt,  &
@@ -670,10 +673,10 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
                      call  USOLVER(ddsdde_bar,c_dstran,u_dstress,ifstress,ntens)     ! get Rosc. correction  c\_dstran() caused by undesired Rosc. dstress
                      where (ifstress == 1) dstran = dstran + c_dstran                ! corrected Rosc. dstran where stress-controlled
                      dstran_Cart = matmul( transpose(M),dstran )                     ! transsform Rosc. to Cartesian dstran
-                     call  UMAT(stress,statev,ddsdde,sse,spd,scd,                    &
-                        rpl,ddsddt,drplde,drpldt,                                    &
-                        stran,dstran_Cart,time,dtime,temp,dtemp,predef,dpred,cmname, &
-                        ndi,nshr,ntens,nstatv,props,nprops,coords,drot,pnewdt,       &
+                     call  UMAT_MohrCoulombStrainSoftening(stress,statev,ddsdde,sse,spd,scd,                       &
+                        rpl,ddsddt,drplde,drpldt,                               &
+                        stran,dstran,time,dtime,temp,dtemp,predef,dpred,cmname, &
+                        ndi,nshr,ntens,nstatv,props,nprops,coords,drot,pnewdt,  &
                         celent,dfgrd0,dfgrd1,noel,npt,layer,kspt,kStep,kinc)
 
                      if (kiter.lt.maxiter) then                                      ! continue iteration
@@ -691,12 +694,12 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
 
                   if((kiter==maxiter) .and. mod(kinc,10)==0 .and. verbose ) then    ! write to screen after each increment
                      write(*, '(A,I3,A,I3,A,I5,A,I2,A,F9.4,A,F9.4)') &
-                              ' ikeyword = ', ikeyword, &
-                              ' kstep = ', kStep, &
-                              ' kinc = ', kinc, &
-                              ' kiter = ', kiter, &
-                              ' TEMP = ', TEMP, &
-                              ' TIME = ', TIME(1)
+                        ' ikeyword = ', ikeyword, &
+                        ' kstep = ', kStep, &
+                        ' kinc = ', kinc, &
+                        ' kiter = ', kiter, &
+                        ' TEMP = ', TEMP, &
+                        ' TIME = ', TIME(1)
                   endif
 
 95             continue !--------------------end of Equilibrium Iteration
@@ -898,8 +901,8 @@ contains !========================================================
 
       ! only  stress components for which isig(ie) /= 0 will be aligned
       forall(ie=1:ntens, align%isig(ie) /= 0) stress(ie)= aState( align%isig(ie))*align%sigFac(ie)
-         return
-      end subroutine  tryAlignStress
+      return
+   end subroutine  tryAlignStress
 
-   end program that_calls_umat
+end program that_calls_umat
 

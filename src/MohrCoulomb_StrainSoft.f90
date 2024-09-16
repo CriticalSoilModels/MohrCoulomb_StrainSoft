@@ -55,26 +55,29 @@ module MOD_MCSS_ESM
    !**********************************************************************
    !TODO: Figure out why only this module created a .mod file
    use mod_MCSS_funcs, only: EndOfStepCorrection, DetermineElasticProportionPegasusMethod, &
-                             DetermineYieldFunctionValue, &
-                             CalculateDerivativesEquivalentPlasticStrainRespectPlasticStrain, &
-                             CalculateDerivativesStrSoftParamRespectEquivalentPlasticStrain , &
-                             CalculateEpsPEq, CalculateSofteningParameters, DetermineDSigAndDEpsP, &
-                             MCSS_Ortiz_Simo_Integration
+      DetermineYieldFunctionValue, &
+      CalculateDerivativesEquivalentPlasticStrainRespectPlasticStrain, &
+      CalculateDerivativesStrSoftParamRespectEquivalentPlasticStrain , &
+      CalculateEpsPEq, CalculateSofteningParameters, DetermineDSigAndDEpsP, &
+      MCSS_Ortiz_Simo_Integration
+   
+   use mod_array_helper, only: reorder_real_array
+
    implicit none
    private ! Makes all function private to this module (No other modules can get access)
    public ESM_MohrCoulombStrainSoftening, UMAT_MohrCoulombStrainSoftening ! Overides private status for specific subroutine
 
 contains
    SUBROUTINE ESM_MohrCoulombStrainSoftening(NPT,NOEL,IDSET,STRESS,EUNLOADING,PLASTICMULTIPLIER, &
-                                             DSTRAN,NSTATEV,STATEV,NADDVAR,ADDITIONALVAR,CMNAME, &
-                                             NPROPS,PROPS,NUMBEROFPHASES,NTENS)
+      DSTRAN,NSTATEV,STATEV,NADDVAR,ADDITIONALVAR,CMNAME, &
+      NPROPS,PROPS,NUMBEROFPHASES,NTENS)
 
       CHARACTER*80 CMNAME
       integer :: NPT, NOEL, IDSET, NSTATEV, NADDVAR, NPROPS, NUMBEROFPHASES, NTENS
       integer :: IStep, TimeStep
       double precision :: Eunloading, PLASTICMULTIPLIER
       double precision :: STRESS(NTENS), DSTRAN(NTENS), STATEV(NSTATEV), ADDITIONALVAR(NADDVAR), &
-                          PROPS(NPROPS)
+         PROPS(NPROPS)
 
       !---Local variables required in standard UMAT
       double precision, dimension(:), allocatable :: ddsddt ! only for fully coupled thermal analysis: variation of stress increment due to temperature
@@ -130,10 +133,10 @@ contains
 
       !---Call the UMAT
       call umat_MohrCoulombStrainSoftening(stress, statev, ddsdde, sse, spd, scd, &
-                                           rpl, ddsddt, drplde, drpldt, stran, dstran, time, dtime, temp, &
-                                           dtemp, predef, dpred, cmname, ndi, nshr, ntens, nstatev, props,&
-                                           nprops, coords, drot, pnewdt, celent, dfgrd0, &
-                                           dfgrd1, noel, npt, layer, kspt, kstep, kinc)
+         rpl, ddsddt, drplde, drpldt, stran, dstran, time, dtime, temp, &
+         dtemp, predef, dpred, cmname, ndi, nshr, ntens, nstatev, props,&
+         nprops, coords, drot, pnewdt, celent, dfgrd0, &
+         dfgrd1, noel, npt, layer, kspt, kstep, kinc)
 
       !---Definition of Eunloading -> required to define the max time step
       Eunloading = max(ddsdde(1,1),ddsdde(2,2),ddsdde(3,3))
@@ -144,18 +147,18 @@ contains
    end subroutine ESM_MohrCoulombStrainSoftening
 
    SUBROUTINE UMAT_MohrCoulombStrainSoftening(STRESS, STATEV, DDSDDE, SSE, SPD, SCD, &
-                                              RPL, DDSDDT, DRPLDE, DRPLDT, STRAN, DSTRAN, TIME, DTIME, TEMP,&
-                                              DTEMP, PREDEF, DPRED, CMNAME, NDI, NSHR, NTENS, NSTATEV, PROPS,&
-                                              NPROPS, COORDS, DROT, PNEWDT, CELENT, DFGRD0, DFGRD1, NOEL, NPT,&
-                                              LAYER, KSPT, KSTEP, KINC)
-      
+      RPL, DDSDDT, DRPLDE, DRPLDT, STRAN, DSTRAN, TIME, DTIME, TEMP,&
+      DTEMP, PREDEF, DPRED, CMNAME, NDI, NSHR, NTENS, NSTATEV, PROPS,&
+      NPROPS, COORDS, DROT, PNEWDT, CELENT, DFGRD0, DFGRD1, NOEL, NPT,&
+      LAYER, KSPT, KSTEP, KINC)
+
       ! Extra variables that are being passed in but not used
       CHARACTER*80 CMNAME
       double precision :: SSE, SPD, SCD, rpl, DDSDDT(NTENS), DRPLDE(NTENS), DRPLDT, STRAN(NTENS), &
-                          TIME(2), DTIME, TEMP, DTEMP, PREDEF(1), DPRED(1), COORDS(3), DROT(3,3), pnewdt,  &
-                          celent, DFGRD0(3,3), DFGRD1(3,3)
+         TIME(2), DTIME, TEMP, DTEMP, PREDEF(1), DPRED(1), COORDS(3), DROT(3,3), pnewdt,  &
+         celent, DFGRD0(3,3), DFGRD1(3,3)
       integer :: ndi, nshr, noel, npt, layer, kspt, kstep, kinc
-      
+
       ! Variables that are being used
       integer :: ntens, nstatev, nprops
       double precision :: STRESS(NTENS), STATEV(NSTATEV), DDSDDE(NTENS,NTENS), DSTRAN(NTENS), PROPS(NPROPS)
@@ -165,7 +168,7 @@ contains
 
       !Soil properties
       double precision :: G, ENU, cp, cr, phip, phir, psip, psir, factor, c, phi, psi, &
-                         F1, F2
+         F1, F2
       ! Stress variables
       double precision :: YTOL, Euler_DT_min
 
@@ -174,12 +177,25 @@ contains
 
       integer :: i, integration_flag, num_integration_iters, ipl, intGlo
       
+      ! Define an array to store the conversion from Anura3D to incremental driver voigt notation
+      integer, parameter :: inc_driver_voigt_reorder(6) = [1, 2, 3, 4, 6, 5]
+
       ! Put the unused variables in an if statement so the compiler doesn't show a warning
       if (.False.) then
          print *, SSE, SPD, SCD, RPL, DDSDDT, DRPLDE, DRPLDT, STRAN, TIME, DTIME,TEMP, DTEMP,     &
-                  PREDEF, DPRED, CMNAME, NDI, NSHR, COORDS, DROT, PNEWDT, CELENT, DFGRD0, DFGRD1, &
-                  NOEL, NPT, LAYER, KSPT, KSTEP, KINC 
+            PREDEF, DPRED, CMNAME, NDI, NSHR, COORDS, DROT, PNEWDT, CELENT, DFGRD0, DFGRD1, &
+            NOEL, NPT, LAYER, KSPT, KSTEP, KINC
       end if
+
+      ! Incremental driver uses a different voigt vector notation than Anura3D.
+      ! Incremental driver uses: [11, 22, 33, 12, 13, 23] (Incremental driver stores engineering shear strains)
+      ! Anura3D uses           : [11, 22, 33, 12, 23, 31] (Anura3D stores engineering shear strain [e11, e22, e33, 2e12, 2e23, 2e31])
+
+      ! Change the order of the stress and strain vectors from the incremental driver input to the Anura3D input
+      STRESS = reorder_real_array(STRESS, inc_driver_voigt_reorder)
+      STRAN = reorder_real_array(STRAN, inc_driver_voigt_reorder)
+      DSTRAN = reorder_real_array(DSTRAN, inc_driver_voigt_reorder) 
+
 
       ! Mohr-Coulomb Strain Softening model
       !
@@ -209,7 +225,7 @@ contains
          print *, "Peak Friction angle", phip
          print *, "Residual Friciton angle", phir
       end if
-      
+
       psip   = PROPS(7)/Rad     ! peak dilation angle (rad)
       psir   = PROPS(8)/Rad     ! residual dilation angle (rad)
       factor = PROPS(9)         ! shape factor
@@ -238,13 +254,18 @@ contains
       DE(4,4) = G
       DE(5,5) = G
       DE(6,6) = G
+      
+      print *, "Strain increment:", DSTRAN
       !*
       ! elastic stress increment
       dSig = matmul(DE, DSTRAN)
-      
-      ! elastic stress
+
+      ! ! elastic stress
       Sig = STRESS + dSig
 
+      if (.False.) then
+         print *, "Stress after first elastic update:", Sig
+      end if
       call MOHRStrainSoftening(IntGlo,F1,F2,G,cp,cr,phip,phir,psip,psir,factor,c,phi,psi,stress,EpsP,&
          DSTRAN,dEpsP,Sig,IPL, integration_flag, YTOL, num_integration_iters, Euler_DT_min)
 
@@ -254,7 +275,10 @@ contains
       Do i=1,NTENS
          STRESS(i) = Sig(i)
       End Do
-
+      
+      if (.False.) then
+         print *, "printing the stress:", stress
+      end if
       STATEV(1) = c
       STATEV(2) = phi
       STATEV(3) = psi
@@ -277,15 +301,17 @@ contains
       DDSDDE(4,4) = G
       DDSDDE(5,5) = G
       DDSDDE(6,6) = G
-      !*
-      !* ... end UMAT routine
-      !*
-      Return
+      
+      ! Change the order back from incremental driver order to Anura3D order
+      STRESS = reorder_real_array(STRESS, inc_driver_voigt_reorder)
+      STRAN = reorder_real_array(STRAN, inc_driver_voigt_reorder)
+      DSTRAN = reorder_real_array(DSTRAN, inc_driver_voigt_reorder) 
+
    end SUBROUTINE UMAT_MohrCoulombStrainSoftening
 
    Subroutine MOHRStrainSoftening(IntGlo,D1,D2, GG,cp,cr,phip,phir, psip,psir,factor,c, &
-                                  phi,psi,Sig0,EpsP,DEps,DEpsP,SigC,IPL, integration_flag, &
-                                  YTOL, num_integration_iters, Euler_DT_min)
+      phi,psi,Sig0,EpsP,DEps,DEpsP,SigC,IPL, integration_flag, &
+      YTOL, num_integration_iters, Euler_DT_min)
 
       !**********************************************************************
       !
@@ -320,6 +346,8 @@ contains
       double precision, dimension(6) :: DEpsPEqDPS,DEpsPEqDPS1
       double precision, dimension(6) :: sumSg,Er
       double precision, dimension(3) :: DSPDPEq,DSPDPEq1 !Variation of softening parameters (c,phi,psi) in function of plastic strain
+      double precision, dimension(6, 6) :: DE
+
       !In variables
       integer, intent(in) :: IntGlo !Global ID of Gauss point or particle
       integer, intent(in) :: integration_flag, num_integration_iters
@@ -364,7 +392,7 @@ contains
       end if
 
       !Tolerances
-      SSTOL = 0.01d0 !Tolerance Relative Error (10-3 to 10-5)
+      SSTOL = 1e-5 !Tolerance Relative Error (10-3 to 10-5)
       SPTOL = 0.01d0 !Tolerance Softening Parameters (0.0001d0)
       ctol = abs(cp-cr)*SPTOL
       phitol = abs(phip-phir)*SPTOL
@@ -390,6 +418,7 @@ contains
       Dcr = abs(c - cr)
       Dphir = abs(phi - phir)
       Dpsir = abs(psi - psir)
+
       !Check if we are in residual conditions or in softening conditions
       if (Dcr <= ctol.and.Dphir <= phitol.and.Dpsir <= psitol) then
          IPL = 1 !IPL=1 Residual conditions --> no changes of the strength parameters
@@ -403,12 +432,23 @@ contains
       select case(integration_flag)
 
        case(ZERO)
-
-         print *, "Inside substepping"
          !Determine the proportion (alpha) of the stress increment that lies within the yield function.
          !The PEGASUS ALGORITHM SCHEME FOR CONVENTIONAL ELASTOPLASTIC MODELS has been used
          call DetermineYieldFunctionValue(IntGlo,Sig0,c,phi,F0)
 
+         ! Form the stiffness matix
+         DE = 0.0
+         DE(1:3,1:3) = D2
+         DE(1,1) = D1
+         DE(2,2) = D1
+         DE(3,3) = D1
+         DE(4,4) = GG
+         DE(5,5) = GG
+         DE(6,6) = GG
+
+         ! Calc the stress increment
+         DSigE = matmul(DE, DEps)
+         
          if (F0 < -YTOL) then !In this Time increment there is part of elastic behavior
             call DetermineElasticProportionPegasusMethod(IntGlo,Sig0,DSigE,DEps,c,phi,YTOL,alpha)
          else
@@ -435,6 +475,7 @@ contains
 
          !Start the plastification
          Do while (T <= 1.0d0)
+
             m = 0 !Counter
             Rn = 100
 
@@ -561,15 +602,14 @@ contains
             DT = min (DT, 1.0d0-T1)
             T = T1
 
-         
+
          end do  !If T=1 the loop is finishedv   !Determine the proportion (alpha) of the stress increment that lies within the yield function.
 
-         print *, "Yield Function value: ", F
        case(ONE)
 
          call MCSS_Ortiz_Simo_Integration(GG, D1, D2, IntGlo, Sig0, c, phi, psi, factor, DEps, EpsP, dEpsP, &
-                                          cr, phir, psir, cp, phip, psip, ctol, phitol, psitol, YTOL      , &
-                                          num_integration_iters)
+            cr, phir, psir, cp, phip, psip, ctol, phitol, psitol, YTOL      , &
+            num_integration_iters)
 
          ! State parameters {phi, psi, c} updated inside ortiz-simo
          ! EpsP updated inside of the integration
@@ -582,5 +622,5 @@ contains
       end select
    end subroutine MOHRStrainSoftening
 
-  
+
 end module MOD_MCSS_ESM
