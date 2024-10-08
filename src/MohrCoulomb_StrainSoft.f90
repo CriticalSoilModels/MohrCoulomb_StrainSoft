@@ -255,7 +255,6 @@ contains
       DE(5,5) = G
       DE(6,6) = G
       
-      print *, "Strain increment:", DSTRAN
       !*
       ! elastic stress increment
       dSig = matmul(DE, DSTRAN)

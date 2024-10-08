@@ -383,9 +383,6 @@ contains
       c = cu
       Phi = Phiu
       Psi = Psiu
-
-      print *, "Friction angle", Phi
-      print *, "Yield function value", F
    end Subroutine MCSS_Ortiz_Simo_Integration
 
    Subroutine CalculateInvariants(IntGlo,Sig,p,J,Lode,S3TA)

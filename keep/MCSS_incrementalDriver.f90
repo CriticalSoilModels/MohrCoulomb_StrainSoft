@@ -649,7 +649,6 @@ PROGRAM that_calls_umat   ! written by  A.Niemunis  2007 - 2023
                      u_dstress = - matmul(cMt,a_dstress)-matmul(cMe,dstran)+ mbinc
                      call  USOLVER(ddsdde_bar,c_dstran,u_dstress,ifstress,ntens)
                      dstran = dstran + c_dstran
-                     print *, "Inc driver dstran", dstran
                      call  UMAT_MohrCoulombStrainSoftening(stress,statev,ddsdde,sse,spd,scd,                       &
                         rpl,ddsddt,drplde,drpldt,                               &
                         stran,dstran,time,dtime,temp,dtemp,predef,dpred,cmname, &
