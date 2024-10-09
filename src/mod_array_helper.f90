@@ -55,11 +55,8 @@ contains
       ! Allocate the new array
       allocate(output_arr(n))
 
-      print *, new_order
       ! Reorder the array
-      do i = 1, n
-         print *, new_order(i)
-         
+      do i = 1, n         
          output_arr(i) = input_arr( new_order(i))
       end do
 
