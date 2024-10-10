@@ -568,7 +568,7 @@ contains
             !and a correction is needed.
             call DetermineYieldFunctionValue(IntGlo,SigYield,c,phi,F)
             n=0 !Counter
-            do while (F > -YTOL .and. n < 10000) !The correction is needed
+            do while (abs(F) >= YTOL .and. n < 10000) !The correction is needed
                n = n + 1
                call CalculateEpsPEq(EpsP,EpsPEq)             !Determine Equivalent plastic Strain (EpsPEq)
                call CalculateDerivativesStrSoftParamRespectEquivalentPlasticStrain(factor,cp,cr,phip,phir,psip,psir,&

@@ -312,7 +312,7 @@ contains
       ! Max number of plastic descent iterations
       counter = 0
 
-      do while(F >= - FTOL .and. counter <= max_iterations)
+      do while(abs(F) >= FTOL .and. counter <= max_iterations)
          call CalculateInvariants(IntGlo, Sigu, p, J, Lode, S3TA)
 
          ! Calc the equivalent plastic strain
@@ -383,6 +383,7 @@ contains
       c = cu
       Phi = Phiu
       Psi = Psiu
+      print *, "Number of iterations", counter
    end Subroutine MCSS_Ortiz_Simo_Integration
 
    Subroutine CalculateInvariants(IntGlo,Sig,p,J,Lode,S3TA)
