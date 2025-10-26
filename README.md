@@ -4,3 +4,7 @@ Repo is for incremental driver that is integrated with a strain softening Mohr-C
 Information about the constitutive relation:
 * Uses a smoothed MC yield surface as presented by Abbo and Sloan to alleviate undefined derivates at the kinks
 * Has both an Oritiz-Simo integration scheme and an Euler/Newton-Raphson integration scheme
+
+## Archive Warning :warning:
+This library has been archived. 
+It has been moved inside of [critical-soil-models](https://github.com/CriticalSoilModels/critical-soil-models). Please leave issues and suggestions on the critical-soil-models repo.
